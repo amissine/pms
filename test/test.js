@@ -1,5 +1,7 @@
 const assert = require('assert');
 const howLongTillLunch = require('..');
+const umd = require('../dist/how-long-till-lunch.umd')
+const fs = require('fs')
 
 function MockDate () {
 	this.date = 0;
@@ -32,22 +34,40 @@ MockDate.now = () => now.valueOf();
 
 global.Date = MockDate;
 
-function test(hours, minutes, seconds, expected) {
+function test(hours, minutes, seconds, expected, fn) {
 	now.setHours(hours);
 	now.setMinutes(minutes);
 	now.setSeconds(seconds);
 
-	assert.equal(howLongTillLunch(...lunchtime), expected);
+	assert.equal(fn(...lunchtime), expected);
 	console.log(`\u001B[32m✓\u001B[39m ${expected}`);
 }
 
 let lunchtime = [ 12, 30 ];
-test(11, 30, 0, '1 hour');
-test(10, 30, 0, '2 hours');
-test(12, 25, 0, '5 minutes');
-test(12, 29, 15, '45 seconds');
-test(13, 30, 0, '23 hours');
+test(11, 30, 0, '1 hour', howLongTillLunch);
+test(10, 30, 0, '2 hours', howLongTillLunch);
+test(12, 25, 0, '5 minutes', howLongTillLunch);
+test(12, 29, 15, '45 seconds', howLongTillLunch);
+test(13, 30, 0, '23 hours', howLongTillLunch);
 
 // some of us like an early lunch
 lunchtime = [ 11, 0 ];
-test(10, 30, 0, '30 minutes');
+test(10, 30, 0, '30 minutes', howLongTillLunch);
+
+///////////////////////////////////////////////////////////
+
+try {
+  const umd = fs.readFileSync('./dist/how-long-till-lunch.umd.js')
+  const tmpfile = './test/testdata.str'
+  fs.writeFileSync(tmpfile, umd)
+  const str = fs.readFileSync(tmpfile)
+  console.log(`\n- str:\n${str}`)
+} catch (err) {
+  console.error(err)
+}
+
+const fn = require('./testdata.str')
+console.log(`\n- fn:\n${fn.toString()}`)
+
+lunchtime = [ 12, 30 ]
+test(10, 30, 0, '2 hours', fn)
