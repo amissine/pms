@@ -1,21 +1,23 @@
 {
-  "name": "rollup-starter-lib",
+  "name": "recurring",
   "version": "1.0.0",
-  "main": "dist/how-long-till-lunch.cjs.js",
-  "module": "dist/how-long-till-lunch.esm.js",
-  "browser": "dist/how-long-till-lunch.umd.js",
+  "main": "dist/recurring.cjs.js",
+  "module": "dist/recurring.esm.js",
+  "browser": "dist/recurring.umd.js",
   "dependencies": {
-    "ms": "^2.0.0"
+    "moment": "^2.29.1",
+    "stellar-sdk": "^8.2.4"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^11.0.1",
+    "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^7.0.0",
     "rollup": "^1.29.0"
   },
   "scripts": {
     "build": "rollup -c",
     "dev": "rollup -c -w",
-    "test": "node test/test.js",
+    "test": "node test/recurring.test.js",
     "pretest": "npm run build"
   },
   "files": [

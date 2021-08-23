@@ -1,4 +1,3 @@
-import json from "@rollup/plugin-json";
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import pkg from './package.json';
@@ -6,14 +5,13 @@ import pkg from './package.json';
 export default [
 	// browser-friendly UMD build
 	{
-		input: 'src/recurring.main.js',
+		input: 'src/main.js',
 		output: {
-			name: 'recurring',
+			name: 'howLongUntilLunch',
 			file: pkg.browser,
 			format: 'umd'
 		},
 		plugins: [
-      json(),
 			resolve(), // so Rollup can find `ms`
 			commonjs() // so Rollup can convert `ms` to an ES module
 		]
@@ -26,7 +24,7 @@ export default [
 	// an array for the `output` option, where we can specify
 	// `file` and `format` for each target)
 	{
-		input: 'src/recurring.main.js',
+		input: 'src/main.js',
 		external: ['ms'],
 		output: [
 			{ file: pkg.main, format: 'cjs' },
