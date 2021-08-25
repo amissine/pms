@@ -1,6 +1,6 @@
 const assert = require('assert');
 const recurring = require('..');
-const upload = require('./upload2wrangler')
+const u2w = require('./upload2wrangler')
 const fs = require('fs')
 
 /* global.Date = MockDate {{{1
@@ -42,8 +42,7 @@ function test(title, skip, fn, args) {
     return;
   }
   fn(args)
-  .then((res) => console.log(`- res ${res}`))
-  .catch((err) => console.error(`- err ${err}`))
+  .then((res) =>  res && console.log(`- res ${res}`))
 
 	console.log(`\u001B[32m✓\u001B[39m ${title}`);
 }
@@ -63,10 +62,10 @@ test('recurring monthly payment from ctldAccount to destAcct', true,
   }
 )
 
-test('upload txFunction to tss-wrangler Cloudflare Worker', false,
-  upload,
+test("upload txFunction 'recurring' to tss-wrangler Cloudflare Worker", false,
+  u2w.upload,
   {
-    txFunction: encodeURI(fs.readFileSync('./tx-functions/recurring.js')),
+    txFunction: fs.readFileSync('./tx-functions/recurring.js'),
   }
 )
 
