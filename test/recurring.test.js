@@ -1,5 +1,8 @@
 const assert = require('assert');
 const recurring = require('..');
+const upload = require('./upload2wrangler')
+const fs = require('fs')
+
 /* global.Date = MockDate {{{1
 const fs = require('fs')
 
@@ -34,15 +37,13 @@ MockDate.now = () => now.valueOf();
 
 global.Date = MockDate;
 }}}1 */
-function test(title, ctldAccount, destAcct) {
-  contract({
-    request: {
-      destination: destAcct,
-      source: ctldAccount
-    },
-  })
-  .then((res) => console.log(res))
-  .catch((err) => console.error(err))
+function test(title, skip, fn, args) {
+  if (skip) {
+    return;
+  }
+  fn(args)
+  .then((res) => console.log(`- res ${res}`))
+  .catch((err) => console.error(`- err ${err}`))
 
 	console.log(`\u001B[32m✓\u001B[39m ${title}`);
 }
@@ -52,8 +53,21 @@ const destAcct = 'GATQMXDGUTJNMGPZTEM3CAVUEHLMXIBM2M2DTSFYT7WYQZEGLU66RTYL'
 const ctldAccount = 'GCEUWXG32WXLK3LXL3WWJ2RLXDQH44U4QIP2SIK4JIP45SDJNZFPYHSL'
 // SBZHBA4WMASHNQDPFGTKVWEJCUH7X5CJOT2LNHWQYJGKSDBJG2OGLSXW
 
-test('recurring monthly payment from ctldAccount to destAcct',
-  ctldAccount, destAcct
+test('recurring monthly payment from ctldAccount to destAcct', true,
+  recurring,
+  {
+    request: {
+      destination: destAcct,
+      source: ctldAccount
+    },
+  }
+)
+
+test('upload txFunction to tss-wrangler Cloudflare Worker', false,
+  upload,
+  {
+    txFunction: encodeURI(fs.readFileSync('./tx-functions/recurring.js')),
+  }
 )
 
 /* dynamic require {{{1

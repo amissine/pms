@@ -6,17 +6,18 @@ const HORIZON_URL = 'https://horizon-testnet.stellar.org'
 const server = new Server(HORIZON_URL)
 const XLM = Asset.native()
 
-async function contract({request, signers}) {
+export default async ({request}) => {
   const destAcct = request.destination
+  const ran = `tss.${destAcct}.ran`
   try {
     const transaction = await server
     .loadAccount(request.source)
-    .then((account) => {
+    .then(account => {
+      const lastRanRaw = account.data_attr[ran]
+      console.log(`- lastRanRaw ${lastRanRaw}`)
       const now = moment.utc().startOf('minute')
       const minTime = now.clone().startOf('month')
       const maxTime = minTime.clone().endOf('month')
-
-      const lastRanRaw = account.data_attr[`tss.${destAcct}.ran`]
 
       if (lastRanRaw) {
         const lastRanParsed = Buffer.from(lastRanRaw, 'base64').toString('utf8')
@@ -40,10 +41,10 @@ async function contract({request, signers}) {
         amount: '1000'
       }))
       .addOperation(Operation.manageData({
-        name: `tss.${destAcct}.ran`,
+        name: ran,
         value: now.unix().toString()
       }))
-/* {{{1
+/* for (const signer of signers) {{{1
       for (const signer of signers) {
         transaction.addOperation(Operation.payment({
           destination: signer.turret,
@@ -57,10 +58,7 @@ async function contract({request, signers}) {
 
     return transaction.build().toXDR()
   }
-
   catch(err) {
     throw err
   }
 }
-
-export default contract

@@ -6,12 +6,10 @@
   "browser": "dist/recurring.umd.js",
   "dependencies": {
     "moment": "^2.29.1",
+    "node-fetch": "^2.6.1",
     "stellar-sdk": "^8.2.4"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^11.0.1",
-    "@rollup/plugin-json": "^4.1.0",
-    "@rollup/plugin-node-resolve": "^7.0.0",
     "rollup": "^1.29.0"
   },
   "scripts": {
