@@ -1,6 +1,9 @@
 const fetch = require('node-fetch')
+const BigNumber = require('bignumber.js')
 
 console.log('- started upload')
+
+const UPLOAD_DIVISOR = 1000
 
 let fields = JSON.stringify([
   {
@@ -16,16 +19,17 @@ let fields = JSON.stringify([
     "rule": "Should be the Stellar address which has Turret signers attached"
   }
 ])
-fields = Buffer.alloc(fields.length, fields).toString('base64')
-fields = encodeURI(fields)
+let fields64 = Buffer.alloc(fields.length, fields).toString('base64')
+fields = encodeURI(fields64)
 //console.log(`- fields:\n${fields}`)
 
-const txFf = ''
-console.log(`- txFf:\n${txFf}`)
-
 const upload = async ({txFunction}) => {
-  const txF = encodeURI(txFunction.toString('base64'))
+  const txFbase64 = txFunction.toString('base64')
+  const txF = encodeURI(txFbase64)
   //console.log(`- txF:\n${txF}`)
+  const txFf = `${cost(txFbase64, fields64)}` 
+  console.log(`- txFf:\n${txFf}\n`)
+
   fetch(
     'http://127.0.0.1:8787/tx-functions',
     { method: 'POST', 
@@ -45,3 +49,11 @@ const upload = async ({txFunction}) => {
 }
 
 exports.upload = upload
+
+function cost (txFunction, txFunctionFields) {
+  const txFunctionFieldsBuffer = Buffer.from(txFunctionFields, 'base64')
+  const txFunctionBuffer = Buffer.from(txFunction)
+  const txFunctionConcat = Buffer.concat([txFunctionBuffer, txFunctionFieldsBuffer])
+
+  return new BigNumber(txFunctionConcat.length).dividedBy(UPLOAD_DIVISOR).toFixed(7)
+}
