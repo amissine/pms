@@ -4,8 +4,6 @@ const u2w = require('./upload2wrangler')
 const fs = require('fs')
 
 /* global.Date = MockDate {{{1
-const fs = require('fs')
-
 function MockDate () {
 	this.date = 0;
 	this.hours = 0;
@@ -62,10 +60,17 @@ test('recurring monthly payment from ctldAccount to destAcct', true,
   }
 )
 
+const TURRET_ADDRESS = "GB5PBJ524NP3UV2EXDEPIECIG6Y4TWVLPTJ3H6E63KVMYZAPDOA42FYG"
+const SPONSOR_PUBKEY = 'GBWFDT2ALGVTR5QCD647CMGDBSWUHTNYAORBVIDIFK656BFTKYEAMH7O'
+const SPONSOR_PRVKEY = 'SB5QXDTF7DZCAWSGITUIYGIO627K5M7K44KFHMCVOBPXQAR7IED6K4MN'
+
 test("upload txFunction 'recurring' to tss-wrangler Cloudflare Worker", false,
   u2w.upload,
   {
     txFunction: fs.readFileSync('./tx-functions/recurring.js'),
+    turret: TURRET_ADDRESS,
+    sponsorPubkey: SPONSOR_PUBKEY,
+    sponsorPrvkey: SPONSOR_PRVKEY
   }
 )
 
