@@ -1,9 +1,7 @@
-const fetch = require('node-fetch')
+const fetch = require('node-fetch') // {{{1
 const BigNumber = require('bignumber.js')
 const { Keypair, Networks, Asset, BASE_FEE, Operation, TransactionBuilder, Server } = require('stellar-sdk')
 const moment = require('moment')
-
-console.log('- started upload') // {{{1
 
 const STELLAR_NETWORK = 'TESTNET'
 const HORIZON_URL = 'https://horizon-testnet.stellar.org'
@@ -32,32 +30,33 @@ fields = encodeURI(fields64)
 
 const upload = // {{{1
   async ({txFunction, turret, sponsorPubkey, sponsorPrvkey}) => {
-
-  const txFbase64 = txFunction.toString('base64')
-  const txF = encodeURI(txFbase64)
-  let txFf
-  try {
-    txFf = await fee(
-      cost(txFbase64, fields64), turret, sponsorPubkey, sponsorPrvkey
-    )
-  } catch(err) {
-    console.log(err)
-  }
-  txFf = encodeURI(txFf)
-  while (txFf.indexOf('+') > -1) {
-    txFf = txFf.replace('+', '%2B')
-  }
-
-  fetch(
-    'http://127.0.0.1:8787/tx-functions',
-    { method: 'POST', 
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },  
-      body: `txFunctionFields=${fields}&txFunction=${txF}&txFunctionFee=${txFf}` 
+    console.log('- started upload')
+    const txFbase64 = txFunction.toString('base64')
+    const txF = encodeURI(txFbase64)
+    let txFf
+    try {
+      txFf = await fee(
+        cost(txFbase64, fields64), turret, sponsorPubkey, sponsorPrvkey
+      )
+    } catch(err) {
+      console.error(err)
     }
-  )
-  .then(
-    res => res.json()
-    .then(json => console.log(json)), 
+    txFf = encodeURI(txFf)
+    while (txFf.indexOf('+') > -1) {
+      txFf = txFf.replace('+', '%2B')
+    }
+
+    let out
+    await fetch(
+      'http://127.0.0.1:8787/tx-functions',
+      { method: 'POST', 
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },  
+        body: `txFunctionFields=${fields}&txFunction=${txF}&txFunctionFee=${txFf}` 
+      }
+    )
+    .then(
+      res => res.json()
+      .then(json => { out = json; }), 
 /* results: {{{2
 {
   hash: '0d3d194d85de8265f7979a43a7d53af2ea00561d07e07868f4149c448c0d0fe7',
@@ -71,13 +70,62 @@ const upload = // {{{1
 }
 [2021-08-27 11:44:37] POST tss-wrangler.alec-missine.workers.dev/tx-functions HTTP/1.1 400 Bad Request
 }}}2 */
-    err => console.log(
-      err,
-      "\n\tHave you started 'wrangler dev' in another terminal?\n"
-    )
-  );
-}
+      err => console.log(err,
+        "\n\tHave you started 'wrangler dev' in another terminal?\n"
+      )
+    );
+    console.log('- ending upload...')
+    return JSON.stringify(out);
+  }
 
+const run = // {{{1
+  async () => {
+    console.log('- started run')
+
+    let out
+    await fetch(
+      'http://127.0.0.1:8787/tx-functions/0d3d194d85de8265f7979a43a7d53af2ea00561d07e07868f4149c448c0d0fe7',
+      { method: 'POST', 
+        headers: { 'Content-Type': 'application/json' },  
+        body: `{"some":"json"}` 
+      }
+    )
+    .then(
+      res => res.json()
+      .then(json => { out = json; }),
+      err => console.log(err,
+        "\n\tHave you started 'wrangler dev' in another terminal?\n"
+      )
+    );
+    console.log('- ending run...')
+    return JSON.stringify(out);
+  }
+
+const manageTxSigners = // {{{1
+  async ({ body }) => {
+    console.log('- started manageTxSigners')
+
+    let out
+    await fetch(
+      `http://127.0.0.1:8787/ctrl-accounts/${body.sourceAccount}`,
+      { method: 'PUT', 
+        headers: { 'Content-Type': 'application/json' },  
+        body: JSON.stringify(body) 
+      }
+    )
+    .then(
+      res => res.json()
+      .then(json => { out = json; }),
+      err => console.log(err,
+        "\n\tHave you started 'wrangler dev' in another terminal?\n"
+      )
+    );
+    console.log('- ending manageTxSigners...')
+    return JSON.stringify(out);
+  }
+
+exports.manageTxSigners= manageTxSigners
+exports.run = run
 exports.upload = upload
 
 function cost (txFunction, txFunctionFields) { // {{{1

@@ -1,6 +1,6 @@
-const assert = require('assert');
+const assert = require('assert'); // {{{1
 const recurring = require('..');
-const u2w = require('./upload2wrangler')
+const w = require('./wrangler')
 const fs = require('fs')
 
 /* global.Date = MockDate {{{1
@@ -35,22 +35,21 @@ MockDate.now = () => now.valueOf();
 
 global.Date = MockDate;
 }}}1 */
-function test(title, skip, fn, args) {
+function test(title, skip, fn, args) { // {{{1
   if (skip) {
     return;
   }
+	console.log(`\u001B[32m✓\u001B[39m ${title}`);
   fn(args)
   .then((res) =>  res && console.log(`- res ${res}`))
-
-	console.log(`\u001B[32m✓\u001B[39m ${title}`);
-}
+} // }}}1
 
 const destAcct = 'GATQMXDGUTJNMGPZTEM3CAVUEHLMXIBM2M2DTSFYT7WYQZEGLU66RTYL'
 // SBXT7FSAMYIKBWYMCXR5QLGSZT2JV3HA57JZ46PI3NZJE5IONT3RJMZF
 const ctldAccount = 'GCEUWXG32WXLK3LXL3WWJ2RLXDQH44U4QIP2SIK4JIP45SDJNZFPYHSL'
 // SBZHBA4WMASHNQDPFGTKVWEJCUH7X5CJOT2LNHWQYJGKSDBJG2OGLSXW
 
-test('recurring monthly payment from ctldAccount to destAcct', true,
+test('recurring monthly payment from ctldAccount to destAcct', true, // {{{1
   recurring,
   {
     request: {
@@ -58,14 +57,52 @@ test('recurring monthly payment from ctldAccount to destAcct', true,
       source: ctldAccount
     },
   }
-)
+) // }}}1
 
 const TURRET_ADDRESS = "GB5PBJ524NP3UV2EXDEPIECIG6Y4TWVLPTJ3H6E63KVMYZAPDOA42FYG"
 const SPONSOR_PUBKEY = 'GBWFDT2ALGVTR5QCD647CMGDBSWUHTNYAORBVIDIFK656BFTKYEAMH7O'
 const SPONSOR_PRVKEY = 'SB5QXDTF7DZCAWSGITUIYGIO627K5M7K44KFHMCVOBPXQAR7IED6K4MN'
 
-test("upload txFunction 'recurring' to tss-wrangler Cloudflare Worker", false,
-  u2w.upload,
+const TURRET2_ADDRESS = 'GBO6KISYZUXIYWCXFYG24X3FGEPCLCFQ5H4ZSDSXIDSMM3NCCRTSWIVT'
+const TURRET2_PRVKEY  = 'SAZFN236J2HFDD6MNXNAKOGU7OUXFU2G6Q26ZI2Z5WVQLSEGWEHTJUN2'
+
+test("upload txFunction 'recurring' to tss-wrangler Cloudflare Worker", true,//{{{1
+  w.upload,
+  {
+    txFunction: fs.readFileSync('./tx-functions/recurring.js'),
+    turret: TURRET_ADDRESS,
+    sponsorPubkey: SPONSOR_PUBKEY,
+    sponsorPrvkey: SPONSOR_PRVKEY
+  }
+) // }}}1
+
+test("upload txFunction 'recurring' to turret2 Cloudflare Worker", false, //{{{1
+  w.upload,
+  {
+    txFunction: fs.readFileSync('./tx-functions/recurring.js'),
+    turret: TURRET2_ADDRESS,
+    sponsorPubkey: SPONSOR_PUBKEY,
+    sponsorPrvkey: SPONSOR_PRVKEY
+  }
+) 
+// - res {"hash":"0d3d194d85de8265f7979a43a7d53af2ea00561d07e07868f4149c448c0d0fe7","signer":"GBIRNQMUMW3QNIVQWK2J6CYCKLJ4RTKF53WJCQQFRBFGTSOJODRVOC7O"} }}}1
+
+const TX_FUNCTION_HASH = '0d3d194d85de8265f7979a43a7d53af2ea00561d07e07868f4149c448c0d0fe7'
+
+test("manage ctldAccount's turrets", true, // {{{1
+  w.manageTxSigners,
+  {
+    body: {
+      txFunctionHash: TX_FUNCTION_HASH,
+      sourceAccount: ctldAccount,
+      removeTurret: '',
+      addTurret: TURRET_ADDRESS
+    }
+  }
+)
+
+test("run txFunction 'recurring' on tss-wrangler Cloudflare Worker", true, // {{{1
+  w.run,
   {
     txFunction: fs.readFileSync('./tx-functions/recurring.js'),
     turret: TURRET_ADDRESS,
