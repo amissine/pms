@@ -3,7 +3,7 @@ const BigNumber = require('bignumber.js')
 const { Keypair, Networks, Asset, BASE_FEE, Operation, TransactionBuilder, Server } = require('stellar-sdk')
 const moment = require('moment')
 
-const STELLAR_NETWORK = 'TESTNET'
+const STELLAR_NETWORK = 'TESTNET' // {{{1
 const HORIZON_URL = 'https://horizon-testnet.stellar.org'
 const server = new Server(HORIZON_URL)
 const XLM = Asset.native()

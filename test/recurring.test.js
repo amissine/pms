@@ -2,6 +2,10 @@ const assert = require('assert'); // {{{1
 const recurring = require('..');
 const w = require('./wrangler')
 const fs = require('fs')
+//const recurringConfig = require('./recurring.config')
+
+//const rc = recurringConfig.init()
+//console.log(`- rc ${JSON.stringify(rc)}`)
 
 /* global.Date = MockDate {{{1
 function MockDate () {
@@ -35,6 +39,10 @@ MockDate.now = () => now.valueOf();
 
 global.Date = MockDate;
 }}}1 */
+
+const RUN_TEST  = false
+const SKIP_TEST = true
+
 function test(title, skip, fn, args) { // {{{1
   if (skip) {
     return;
@@ -49,7 +57,7 @@ const destAcct = 'GATQMXDGUTJNMGPZTEM3CAVUEHLMXIBM2M2DTSFYT7WYQZEGLU66RTYL'
 const ctldAccount = 'GCEUWXG32WXLK3LXL3WWJ2RLXDQH44U4QIP2SIK4JIP45SDJNZFPYHSL'
 // SBZHBA4WMASHNQDPFGTKVWEJCUH7X5CJOT2LNHWQYJGKSDBJG2OGLSXW
 
-test('recurring monthly payment from ctldAccount to destAcct', true, // {{{1
+test('recurring monthly payment from ctldAccount to destAcct', SKIP_TEST, // {{{1
   recurring,
   {
     request: {
@@ -66,7 +74,10 @@ const SPONSOR_PRVKEY = 'SB5QXDTF7DZCAWSGITUIYGIO627K5M7K44KFHMCVOBPXQAR7IED6K4MN
 const TURRET2_ADDRESS = 'GBO6KISYZUXIYWCXFYG24X3FGEPCLCFQ5H4ZSDSXIDSMM3NCCRTSWIVT'
 const TURRET2_PRVKEY  = 'SAZFN236J2HFDD6MNXNAKOGU7OUXFU2G6Q26ZI2Z5WVQLSEGWEHTJUN2'
 
-test("upload txFunction 'recurring' to tss-wrangler Cloudflare Worker", true,//{{{1
+const TURRET3_ADDRESS = 'GATRGRWZJNVL4N47FO646B23CF5TZPTHTFSU5TG7QXF6HR4MSGBAILTT'
+const TURRET3_PRVKEY  = 'SCXUZTFYJSXBZI64YJNEOP55G7SXC2RW4MNH22SLWFVTWTY2KA2JOIO3'
+
+test("upload txFunction 'recurring' to tss-wrangler Cloudflare Worker", SKIP_TEST,//{{{1
   w.upload,
   {
     txFunction: fs.readFileSync('./tx-functions/recurring.js'),
@@ -74,9 +85,9 @@ test("upload txFunction 'recurring' to tss-wrangler Cloudflare Worker", true,//{
     sponsorPubkey: SPONSOR_PUBKEY,
     sponsorPrvkey: SPONSOR_PRVKEY
   }
-) // }}}1
+)
 
-test("upload txFunction 'recurring' to turret2 Cloudflare Worker", false, //{{{1
+test("upload txFunction 'recurring' to turret2 Cloudflare Worker", SKIP_TEST, //{{{1
   w.upload,
   {
     txFunction: fs.readFileSync('./tx-functions/recurring.js'),
@@ -85,23 +96,34 @@ test("upload txFunction 'recurring' to turret2 Cloudflare Worker", false, //{{{1
     sponsorPrvkey: SPONSOR_PRVKEY
   }
 ) 
-// - res {"hash":"0d3d194d85de8265f7979a43a7d53af2ea00561d07e07868f4149c448c0d0fe7","signer":"GBIRNQMUMW3QNIVQWK2J6CYCKLJ4RTKF53WJCQQFRBFGTSOJODRVOC7O"} }}}1
+// - res {"hash":"0d3d194d85de8265f7979a43a7d53af2ea00561d07e07868f4149c448c0d0fe7","signer":"GBIRNQMUMW3QNIVQWK2J6CYCKLJ4RTKF53WJCQQFRBFGTSOJODRVOC7O"} 
+
+test("upload txFunction 'recurring' to turret3 Cloudflare Worker", RUN_TEST, //{{{1
+  w.upload,
+  {
+    txFunction: fs.readFileSync('./tx-functions/recurring.js'),
+    turret: TURRET3_ADDRESS,
+    sponsorPubkey: SPONSOR_PUBKEY,
+    sponsorPrvkey: SPONSOR_PRVKEY
+  }
+) 
+// - res {"hash":"0d3d194d85de8265f7979a43a7d53af2ea00561d07e07868f4149c448c0d0fe7","signer":"GBF7AKPZINKTXMIWITUDVVGQ76XZIHJN2R3MCZJJDSNFASTRF6B56R63"} }}}1
 
 const TX_FUNCTION_HASH = '0d3d194d85de8265f7979a43a7d53af2ea00561d07e07868f4149c448c0d0fe7'
 
-test("manage ctldAccount's turrets", true, // {{{1
+test("manage ctldAccount's turrets", SKIP_TEST, // {{{1
   w.manageTxSigners,
   {
     body: {
       txFunctionHash: TX_FUNCTION_HASH,
       sourceAccount: ctldAccount,
-      removeTurret: '',
-      addTurret: TURRET_ADDRESS
+      removeTurret: TURRET3_ADDRESS,
+      addTurret: TURRET2_ADDRESS
     }
   }
 )
 
-test("run txFunction 'recurring' on tss-wrangler Cloudflare Worker", true, // {{{1
+test("run txFunction 'recurring' on tss-wrangler Cloudflare Worker", SKIP_TEST, // {{{1
   w.run,
   {
     txFunction: fs.readFileSync('./tx-functions/recurring.js'),
