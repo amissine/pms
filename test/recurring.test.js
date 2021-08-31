@@ -55,7 +55,7 @@ function test(title, skip, fn, args) { // {{{1
 const destAcct = 'GATQMXDGUTJNMGPZTEM3CAVUEHLMXIBM2M2DTSFYT7WYQZEGLU66RTYL'
 // SBXT7FSAMYIKBWYMCXR5QLGSZT2JV3HA57JZ46PI3NZJE5IONT3RJMZF
 const ctldAccount = 'GCEUWXG32WXLK3LXL3WWJ2RLXDQH44U4QIP2SIK4JIP45SDJNZFPYHSL'
-// SBZHBA4WMASHNQDPFGTKVWEJCUH7X5CJOT2LNHWQYJGKSDBJG2OGLSXW
+const secret = 'SBZHBA4WMASHNQDPFGTKVWEJCUH7X5CJOT2LNHWQYJGKSDBJG2OGLSXW'
 
 test('recurring monthly payment from ctldAccount to destAcct', SKIP_TEST, // {{{1
   recurring,
@@ -98,7 +98,7 @@ test("upload txFunction 'recurring' to turret2 Cloudflare Worker", SKIP_TEST, //
 ) 
 // - res {"hash":"0d3d194d85de8265f7979a43a7d53af2ea00561d07e07868f4149c448c0d0fe7","signer":"GBIRNQMUMW3QNIVQWK2J6CYCKLJ4RTKF53WJCQQFRBFGTSOJODRVOC7O"} 
 
-test("upload txFunction 'recurring' to turret3 Cloudflare Worker", RUN_TEST, //{{{1
+test("upload txFunction 'recurring' to turret3 Cloudflare Worker", SKIP_TEST, //{{{1
   w.upload,
   {
     txFunction: fs.readFileSync('./tx-functions/recurring.js'),
@@ -110,15 +110,31 @@ test("upload txFunction 'recurring' to turret3 Cloudflare Worker", RUN_TEST, //{
 // - res {"hash":"0d3d194d85de8265f7979a43a7d53af2ea00561d07e07868f4149c448c0d0fe7","signer":"GBF7AKPZINKTXMIWITUDVVGQ76XZIHJN2R3MCZJJDSNFASTRF6B56R63"} }}}1
 
 const TX_FUNCTION_HASH = '0d3d194d85de8265f7979a43a7d53af2ea00561d07e07868f4149c448c0d0fe7'
+const TURRET1_SIGNER = 'GBDU6GV5AZTZVFUGMIZDN7HKEYEOMC5WHKN5AVJPQVZSBFWH3Y4RNILN'
+const TURRET2_SIGNER = 'GBIRNQMUMW3QNIVQWK2J6CYCKLJ4RTKF53WJCQQFRBFGTSOJODRVOC7O'
+const TURRET3_SIGNER = 'GBF7AKPZINKTXMIWITUDVVGQ76XZIHJN2R3MCZJJDSNFASTRF6B56R63'
 
-test("manage ctldAccount's turrets", SKIP_TEST, // {{{1
-  w.manageTxSigners,
+test("check ctldAccount's setup", RUN_TEST, // {{{1
+  w.checkSetup,
   {
     body: {
-      txFunctionHash: TX_FUNCTION_HASH,
-      sourceAccount: ctldAccount,
-      removeTurret: TURRET3_ADDRESS,
-      addTurret: TURRET2_ADDRESS
+      sourceAccount: ctldAccount, secret: secret,
+      thresholds: {
+        low_threshold: 2,
+        med_threshold: 3,
+        high_threshold: 4
+      },
+      signers: [
+        { weight: 4 },
+        { weight: 1, ed25519PublicKey: TURRET1_SIGNER },
+        { weight: 1, ed25519PublicKey: TURRET2_SIGNER },
+        { weight: 1, ed25519PublicKey: TURRET3_SIGNER }
+      ],
+      turrets: [
+        [TURRET_ADDRESS, TURRET1_SIGNER],
+        [TURRET2_ADDRESS, TURRET2_SIGNER],
+        [TURRET3_ADDRESS, TURRET3_SIGNER]
+      ]
     }
   }
 )

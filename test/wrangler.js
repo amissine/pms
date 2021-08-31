@@ -2,6 +2,7 @@ const fetch = require('node-fetch') // {{{1
 const BigNumber = require('bignumber.js')
 const { Keypair, Networks, Asset, BASE_FEE, Operation, TransactionBuilder, Server } = require('stellar-sdk')
 const moment = require('moment')
+const u = require('./util')
 
 const STELLAR_NETWORK = 'TESTNET' // {{{1
 const HORIZON_URL = 'https://horizon-testnet.stellar.org'
@@ -124,6 +125,46 @@ const manageTxSigners = // {{{1
     return JSON.stringify(out);
   }
 
+const checkSetup = // {{{1
+  async ({ body }) => {
+    console.log(`- started checkSetup`)
+
+    const keys = Keypair.fromSecret(body.secret)
+
+    let out = await server.loadAccount(body.sourceAccount)
+    .then(account => {
+      if (account.thresholds.high_threshold == 4) {
+        return 'account already set up';
+      }
+      let tb = new TransactionBuilder(account, u.opts())
+      .addOperation(Operation.setOptions({
+        masterWeight: body.signers[0].weight,
+        lowThreshold: body.thresholds.low_threshold,
+        medThreshold: body.thresholds.med_threshold,
+        highThreshold: body.thresholds.high_threshold
+      }))
+      body.signers.shift()
+      for (signer of body.signers) {
+        tb = tb.addOperation(Operation.setOptions({ signer: signer }))
+      }
+      for (turret of body.turrets) {
+        tb = tb.addOperation(Operation.manageData({
+          name: `TSS_${turret[0]}`,
+          value: turret[1]
+        }))
+      }
+      let transaction = tb.build()
+      transaction.sign(keys)
+      return server.submitTransaction(transaction);
+    })
+    .then(result => `result ${JSON.stringify(result)}`)
+    .catch(error => `error ${error}`)
+
+    console.log('- ending checkSetup...')
+    return out;
+  }
+
+exports.checkSetup = checkSetup
 exports.manageTxSigners= manageTxSigners
 exports.run = run
 exports.upload = upload
@@ -160,11 +201,8 @@ async function fee (cost, turret, sponsorPubkey, sponsorPrvkey) { // {{{1
       }))
       .build()
       transaction.sign(keys)
-      transaction = transaction.toXDR()
-//console.log(`- amount ${cost}\n- destination ${turret}\n- source ${sponsorPubkey}\n- minTime ${minTime.unix()}\n- maxTime ${maxTime.unix()}\n- sponsorPrvkey ${sponsorPrvkey}\n- transaction ${transaction}`)
-      return transaction;
+      return transaction.toXDR();
     })
-    //transaction.sign(keys)
     return transaction;
   }
   catch(err) {
