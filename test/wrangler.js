@@ -1,6 +1,6 @@
 const fetch = require('node-fetch') // {{{1
 const BigNumber = require('bignumber.js')
-const { Keypair, Networks, Asset, BASE_FEE, Operation, TransactionBuilder, Server } = require('stellar-sdk')
+const { xdr, Claimant, Keypair, Networks, Asset, BASE_FEE, Operation, TransactionBuilder, Server } = require('stellar-sdk')
 const moment = require('moment')
 const u = require('./util')
 
@@ -34,18 +34,14 @@ const upload = // {{{1
     console.log('- started upload')
     const txFbase64 = txFunction.toString('base64')
     const txF = encodeURI(txFbase64)
-    let txFf
+    let txFf // {{{2
     try {
-      txFf = await fee(
-        cost(txFbase64, fields64), turret, sponsorPubkey, sponsorPrvkey
-      )
-    } catch(err) {
-      console.error(err)
-    }
+      txFf = await fee(cost(txFbase64, fields64), turret, sponsorPubkey, sponsorPrvkey)
+    } catch(err) { return err; }
     txFf = encodeURI(txFf)
     while (txFf.indexOf('+') > -1) {
       txFf = txFf.replace('+', '%2B')
-    }
+    } // }}}2
 
     let out
     await fetch(
@@ -80,49 +76,30 @@ const upload = // {{{1
   }
 
 const run = // {{{1
-  async () => {
+  async ({txFunction, turret, sponsorPubkey, sponsorPrvkey}) => {
     console.log('- started run')
 
-    let out
-    await fetch(
+    let txFee // {{{2
+    try {
+      txFee = await fee(cost(txFbase64, fields64), turret, sponsorPubkey, sponsorPrvkey)
+    } catch(err) { return err; }
+
+    txFee = encodeURI(txFee) // }}}2
+
+    let out = await fetch(
       'http://127.0.0.1:8787/tx-functions/0d3d194d85de8265f7979a43a7d53af2ea00561d07e07868f4149c448c0d0fe7',
       { method: 'POST', 
-        headers: { 'Content-Type': 'application/json' },  
+        headers: {
+          'Content-Type': 'application/json',
+          '': txFee
+        },  
         body: `{"some":"json"}` 
       }
     )
-    .then(
-      res => res.json()
-      .then(json => { out = json; }),
-      err => console.log(err,
-        "\n\tHave you started 'wrangler dev' in another terminal?\n"
-      )
-    );
+    .then(res => res.json().then(json => `json ${JSON.stringify(json)}`))
+    .catch(err => `err ${err}\n\tHave you started 'wrangler dev' in another terminal?\n`)
     console.log('- ending run...')
-    return JSON.stringify(out);
-  }
-
-const manageTxSigners = // {{{1
-  async ({ body }) => {
-    console.log('- started manageTxSigners')
-
-    let out
-    await fetch(
-      `http://127.0.0.1:8787/ctrl-accounts/${body.sourceAccount}`,
-      { method: 'PUT', 
-        headers: { 'Content-Type': 'application/json' },  
-        body: JSON.stringify(body) 
-      }
-    )
-    .then(
-      res => res.json()
-      .then(json => { out = json; }),
-      err => console.log(err,
-        "\n\tHave you started 'wrangler dev' in another terminal?\n"
-      )
-    );
-    console.log('- ending manageTxSigners...')
-    return JSON.stringify(out);
+    return out;
   }
 
 const checkSetup = // {{{1
@@ -143,7 +120,7 @@ const checkSetup = // {{{1
         medThreshold: body.thresholds.med_threshold,
         highThreshold: body.thresholds.high_threshold
       }))
-      body.signers.shift()
+      body.signers.shift() // {{{2
       for (signer of body.signers) {
         tb = tb.addOperation(Operation.setOptions({ signer: signer }))
       }
@@ -152,7 +129,7 @@ const checkSetup = // {{{1
           name: `TSS_${turret[0]}`,
           value: turret[1]
         }))
-      }
+      } // }}}2
       let transaction = tb.build()
       transaction.sign(keys)
       return server.submitTransaction(transaction);
@@ -164,8 +141,58 @@ const checkSetup = // {{{1
     return out;
   }
 
+const createClaimableBalance = // {{{1
+  async ({ sponsorPrvkey, amount, claimants}) => {
+    console.log(`- started createClaimableBalance`)
+
+    const keys = Keypair.fromSecret(sponsorPrvkey)
+    const predicate = Claimant.predicateUnconditional()
+    let pairs = []
+    for (claimant of claimants) {
+      pairs.push(new Claimant(claimant, predicate))
+    }
+    claimants = pairs
+
+    let out = await server.loadAccount(keys.publicKey())
+    .then(account => {
+      let transaction = new TransactionBuilder(account, u.opts())
+      .addOperation(Operation.createClaimableBalance({
+        asset: XLM,
+        amount: amount,
+        claimants: claimants
+      }))
+      .build()
+      transaction.sign(keys)
+      return server.submitTransaction(transaction);
+    })
+    .then(result => `result ${JSON.stringify(result)}`)
+    .catch(error => `error ${error}`)
+
+    console.log('- ending createClaimableBalance...')
+    return out;
+  }
+
+const getClaimableBalanceId = // {{{1
+  async ({ result_xdr }) => {
+    console.log('- started getClaimableBalanceId')
+
+    let txResult = xdr.TransactionResult.fromXDR(result_xdr, "base64");
+    let results = txResult.result().results();
+
+    // We look at the first result since our first (and only) operation
+    // in the transaction was the CreateClaimableBalanceOp.
+    let operationResult = results[0].value().createClaimableBalanceResult();
+    let balanceId = operationResult.balanceId().toXDR("hex");
+
+    let out = balanceId
+
+    console.log('- ending getClaimableBalanceId...')
+    return out;
+  } // }}}1
+
+exports.getClaimableBalanceId = getClaimableBalanceId
+exports.createClaimableBalance = createClaimableBalance
 exports.checkSetup = checkSetup
-exports.manageTxSigners= manageTxSigners
 exports.run = run
 exports.upload = upload
 
