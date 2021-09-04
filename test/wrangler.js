@@ -32,16 +32,15 @@ fields = encodeURI(fields64)
 const upload = // {{{1
   async ({txFunction, turret, sponsorPubkey, sponsorPrvkey}) => {
     console.log('- started upload')
-    const txFbase64 = txFunction.toString('base64')
-    const txF = encodeURI(txFbase64)
-    let txFf // {{{2
+
+    //const txFbase64 = txFunction.toString('base64')
+    //const txF = encodeURI(txFbase64)
+    const txF = encodeURIplus(txFunction)
+    let txFf
     try {
-      txFf = await fee(cost(txFbase64, fields64), turret, sponsorPubkey, sponsorPrvkey)
+      txFf = await fee(cost(txF, fields64), turret, sponsorPubkey, sponsorPrvkey)
     } catch(err) { return err; }
-    txFf = encodeURI(txFf)
-    while (txFf.indexOf('+') > -1) {
-      txFf = txFf.replace('+', '%2B')
-    } // }}}2
+    txFf = encodeURIplus(txFf)
 
     let out
     await fetch(
@@ -241,7 +240,10 @@ function cost (txFunction, txFunctionFields) { // {{{1
   const txFunctionBuffer = Buffer.from(txFunction)
   const txFunctionConcat = Buffer.concat([txFunctionBuffer, txFunctionFieldsBuffer])
 
-  return new BigNumber(txFunctionConcat.length).dividedBy(UPLOAD_DIVISOR).toFixed(7)
+  const cost =
+    new BigNumber(txFunctionConcat.length).dividedBy(UPLOAD_DIVISOR).toFixed(7)
+  console.log(`- cost ${cost}`)
+  return cost;
 }
 
 async function fee (cost, turret, sponsorPubkey, sponsorPrvkey) { // {{{1
@@ -289,4 +291,12 @@ function fee_token (keys, balanceId, txFunctionHash) { // {{{1
   .build()
   tx.sign(keys)
   return tx.toXDR();
+}
+
+function encodeURIplus (input) { // {{{1
+  let output = encodeURI(input)
+  while (output.indexOf('+') > -1) {
+    output = output.replace('+', '%2B')
+  }
+  return output;
 }
