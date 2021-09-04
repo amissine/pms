@@ -1,6 +1,6 @@
 const fetch = require('node-fetch') // {{{1
 const BigNumber = require('bignumber.js')
-const { xdr, Claimant, Keypair, Networks, Asset, BASE_FEE, Operation, TransactionBuilder, Server } = require('stellar-sdk')
+const { Account, xdr, Claimant, Keypair, Networks, Asset, BASE_FEE, Operation, TransactionBuilder, Server } = require('stellar-sdk')
 const moment = require('moment')
 const u = require('./util')
 
@@ -76,27 +76,29 @@ const upload = // {{{1
   }
 
 const run = // {{{1
-  async ({txFunction, turret, sponsorPubkey, sponsorPrvkey}) => {
+  async ({txFunctionHash, balanceId, sponsorPubkey, sponsorPrvkey}) => {
     console.log('- started run')
 
-    let txFee // {{{2
+    let feeToken // {{{2
     try {
-      txFee = await fee(cost(txFbase64, fields64), turret, sponsorPubkey, sponsorPrvkey)
-    } catch(err) { return err; }
+      feeToken = fee_token(Keypair.fromSecret(sponsorPrvkey), balanceId, txFunctionHash)
+    } catch(err) { throw err; }
 
-    txFee = encodeURI(txFee) // }}}2
+    console.log(`- feeToken ${feeToken}`)
+    //feeToken = encodeURI(feeToken) // }}}2
 
     let out = await fetch(
-      'http://127.0.0.1:8787/tx-functions/0d3d194d85de8265f7979a43a7d53af2ea00561d07e07868f4149c448c0d0fe7',
+      `http://127.0.0.1:8787/tx-functions/${txFunctionHash}`,
       { method: 'POST', 
         headers: {
           'Content-Type': 'application/json',
-          '': txFee
+          'authorization': feeToken
         },  
         body: `{"some":"json"}` 
       }
     )
-    .then(res => res.json().then(json => `json ${JSON.stringify(json)}`))
+    //.then(res => res.json().then(json => `json ${JSON.stringify(json)}`))
+    .then(res => res.text().then(text => text))
     .catch(err => `err ${err}\n\tHave you started 'wrangler dev' in another terminal?\n`)
     console.log('- ending run...')
     return out;
@@ -188,8 +190,46 @@ const getClaimableBalanceId = // {{{1
 
     console.log('- ending getClaimableBalanceId...')
     return out;
+  }
+
+const createClaimableBalanceNoReclaim = // {{{1
+  async ({ sponsorPrvkey, amount, claimants}) => {
+    console.log('- started createClaimableBalanceNoReclaim')
+    
+    if (claimants.length > 1)
+      throw 'No reclaim for now'
+
+    const keys = Keypair.fromSecret(sponsorPrvkey)
+    const predicate = Claimant.predicateUnconditional()
+    claimants = [new Claimant(claimants[0], predicate)]
+
+    let out = await server.loadAccount(keys.publicKey())
+    .then(account => {
+      let transaction = new TransactionBuilder(account, u.opts())
+      .addOperation(Operation.createClaimableBalance({
+        asset: XLM,
+        amount: amount,
+        claimants: claimants
+      }))
+      .build()
+      transaction.sign(keys)
+      return server.submitTransaction(transaction);
+    })
+    .then(result => {
+      let result_xdr = result.result_xdr
+      let txResult = xdr.TransactionResult.fromXDR(result_xdr, "base64")
+      let results = txResult.result().results()
+      let operationResult = results[0].value().createClaimableBalanceResult()
+      let balanceId = operationResult.balanceId().toXDR("hex")
+      return `\nresult ${JSON.stringify(result)}\nbalanceId ${balanceId}`;
+    })
+    .catch(error => `error ${error}`)
+
+    console.log('- ending createClaimableBalanceNoReclaim...')
+    return out;
   } // }}}1
 
+exports.createClaimableBalanceNoReclaim = createClaimableBalanceNoReclaim
 exports.getClaimableBalanceId = getClaimableBalanceId
 exports.createClaimableBalance = createClaimableBalance
 exports.checkSetup = checkSetup
@@ -235,4 +275,18 @@ async function fee (cost, turret, sponsorPubkey, sponsorPrvkey) { // {{{1
   catch(err) {
     throw err
   }
+}
+
+function fee_token (keys, balanceId, txFunctionHash) { // {{{1
+  let tx = new TransactionBuilder(new Account(keys.publicKey(), '-1'), u.opts())
+  .addOperation(Operation.claimClaimableBalance({
+    balanceId: balanceId
+  }))
+  .addOperation(Operation.manageData({
+    name: 'txFunctionHash',
+    value: txFunctionHash
+  }))
+  .build()
+  tx.sign(keys)
+  return tx.toXDR();
 }
