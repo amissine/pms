@@ -87,7 +87,7 @@ test("upload txFunction 'recurring' to tss-wrangler Cloudflare Worker", SKIP_TES
     sponsorPrvkey: SPONSOR_PRVKEY
   }
 )
-// - res {"hash":"6455666cc4fe5e0eede12c2fae37d523d617be558f6e6d2a4e6457d85d6988e3","signer":"GDVHERL2KR2OFJGR5H6HF5SQI63AYN76NXA7Z2ZCCUMBAWRN75JUDZZ5"}
+// - res {"hash":"9f80e11112b5893213ac7d0f191a578785bfe04ced53d0d1960e177ce72ef63e","signer":"GBJYHNHAEKLC75IRWQGPKPCBTLXFKX4IE6N5XDQ6EQZWXCN3E7RIDLB7"}
 
 test("upload txFunction 'recurring' to turret2 Cloudflare Worker", SKIP_TEST, //{{{1
   w.upload,
@@ -112,10 +112,10 @@ test("upload txFunction 'recurring' to turret3 Cloudflare Worker", SKIP_TEST, //
 // - res {"hash":"0d3d194d85de8265f7979a43a7d53af2ea00561d07e07868f4149c448c0d0fe7","signer":"GBF7AKPZINKTXMIWITUDVVGQ76XZIHJN2R3MCZJJDSNFASTRF6B56R63"} }}}1
 
 const TX_FUNCTION_HASH =
-  '6455666cc4fe5e0eede12c2fae37d523d617be558f6e6d2a4e6457d85d6988e3'
-const TURRET1_SIGNER = 'GDVHERL2KR2OFJGR5H6HF5SQI63AYN76NXA7Z2ZCCUMBAWRN75JUDZZ5'
-const TURRET2_SIGNER = 'GBIRNQMUMW3QNIVQWK2J6CYCKLJ4RTKF53WJCQQFRBFGTSOJODRVOC7O'
-const TURRET3_SIGNER = 'GBF7AKPZINKTXMIWITUDVVGQ76XZIHJN2R3MCZJJDSNFASTRF6B56R63'
+  '9f80e11112b5893213ac7d0f191a578785bfe04ced53d0d1960e177ce72ef63e'
+const TURRET1_SIGNER = 'GBJYHNHAEKLC75IRWQGPKPCBTLXFKX4IE6N5XDQ6EQZWXCN3E7RIDLB7'
+const TURRET2_SIGNER = ''
+const TURRET3_SIGNER = ''
 
 test("check ctldAccount's setup", SKIP_TEST, // {{{1
   w.checkSetup,
@@ -179,12 +179,37 @@ test("run txFunction 'recurring' on tss-wrangler Cloudflare Worker", RUN_TEST, /
   w.run,
   {
     txFunctionHash: TX_FUNCTION_HASH,
+    body: {
+      destination: destAcct,
+      source: ctldAccount,
+    },
     balanceId: '00000000f75c3cab3d70f9291ff53d4998b1a00b872ae7f44503d66ae100964af970e382',
     sponsorPubkey: SPONSOR_PUBKEY,
     sponsorPrvkey: SPONSOR_PRVKEY
   }
 )
 
+test("invoke 'eval' on 'recurring'", SKIP_TEST, // {{{1
+  invokeEval,
+  {
+    txFunction: fs.readFileSync('./tx-functions/recurring.js'),
+    body: {
+      destination: 'GATQMXDGUTJNMGPZTEM3CAVUEHLMXIBM2M2DTSFYT7WYQZEGLU66RTYL',
+      source: 'GCEUWXG32WXLK3LXL3WWJ2RLXDQH44U4QIP2SIK4JIP45SDJNZFPYHSL',
+    },
+  },
+)
+
+async function invokeEval ({ txFunction, body }) {
+  const result = eval(`
+    'use strict'; 
+    ${txFunction};
+    module.exports;
+  `)
+  //return Object.getOwnPropertyNames(result);
+  //return typeof result.txFunction;
+  return await result.txFunction(body);
+}
 /* dynamic require {{{1
 try {
   const umd = fs.readFileSync('./dist/how-long-till-lunch.umd.js')

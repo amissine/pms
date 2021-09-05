@@ -33,8 +33,6 @@ const upload = // {{{1
   async ({txFunction, turret, sponsorPubkey, sponsorPrvkey}) => {
     console.log('- started upload')
 
-    //const txFbase64 = txFunction.toString('base64')
-    //const txF = encodeURI(txFbase64)
     const txF = encodeURIplus(txFunction)
     let txFf
     try {
@@ -53,19 +51,6 @@ const upload = // {{{1
     .then(
       res => res.json()
       .then(json => { out = json; }), 
-/* results: {{{2
-{
-  hash: '0d3d194d85de8265f7979a43a7d53af2ea00561d07e07868f4149c448c0d0fe7',
-  signer: 'GBDU6GV5AZTZVFUGMIZDN7HKEYEOMC5WHKN5AVJPQVZSBFWH3Y4RNILN'
-}
-[2021-08-27 11:34:52] POST tss-wrangler.alec-missine.workers.dev/tx-functions HTTP/1.1 200 OK
-
-{
-  message: 'txFunction 0d3d194d85de8265f7979a43a7d53af2ea00561d07e07868f4149c448c0d0fe7 has already been uploaded to this turret',
-  status: 400
-}
-[2021-08-27 11:44:37] POST tss-wrangler.alec-missine.workers.dev/tx-functions HTTP/1.1 400 Bad Request
-}}}2 */
       err => console.log(err,
         "\n\tHave you started 'wrangler dev' in another terminal?\n"
       )
@@ -75,7 +60,7 @@ const upload = // {{{1
   }
 
 const run = // {{{1
-  async ({txFunctionHash, balanceId, sponsorPubkey, sponsorPrvkey}) => {
+  async ({txFunctionHash, body, balanceId, sponsorPubkey, sponsorPrvkey}) => {
     console.log('- started run')
 
     let feeToken // {{{2
@@ -93,7 +78,7 @@ const run = // {{{1
           'Content-Type': 'application/json',
           'authorization': feeToken
         },  
-        body: `{"some":"json"}` 
+        body: JSON.stringify(body)
       }
     )
     //.then(res => res.json().then(json => `json ${JSON.stringify(json)}`))

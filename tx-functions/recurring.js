@@ -6,7 +6,7 @@ const HORIZON_URL = 'https://horizon-testnet.stellar.org'
 const server = new Server(HORIZON_URL)
 const XLM = Asset.native()
 
-const recurring = async ({request}) => {
+const recurring = async request => {
   const destAcct = request.destination
   const ran = `tss.${destAcct}.ran`
   try {
@@ -14,7 +14,7 @@ const recurring = async ({request}) => {
     .loadAccount(request.source)
     .then(account => {
       const lastRanRaw = account.data_attr[ran]
-      console.log(`- lastRanRaw ${lastRanRaw}`)
+      //console.log(`- lastRanRaw ${lastRanRaw}`)
       const now = moment.utc().startOf('minute')
       const minTime = now.clone().startOf('month')
       const maxTime = minTime.clone().endOf('month')
@@ -44,15 +44,6 @@ const recurring = async ({request}) => {
         name: ran,
         value: now.unix().toString()
       }))
-/* for (const signer of signers) {{{1
-      for (const signer of signers) {
-        transaction.addOperation(Operation.payment({
-          destination: signer.turret,
-          amount: signer.fee,
-          asset: XLM
-        }))
-      }
-}}}1 */
       return transaction
     })
 
